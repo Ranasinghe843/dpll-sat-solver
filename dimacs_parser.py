@@ -46,7 +46,7 @@ if __name__ == "__main__":
     files = [
         "test_sat_1.cnf",
         "test_unsat_1.cnf",
- "test_sat_2.cnf",
+        "test_sat_2.cnf",
         "test_unsat_2.cnf"
     ]
 
