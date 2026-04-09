@@ -1,3 +1,5 @@
+import sys
+
 def parse_dimacs(filename):
     clauses = []
     num_vars = 0
@@ -13,6 +15,9 @@ def parse_dimacs(filename):
 
             if line.startswith("c"): #comment
                 continue
+
+            if line.startswith('%'):
+                    break
 
             if line.startswith("p"): #start
                 parts = line.split()
@@ -43,15 +48,9 @@ def parse_dimacs(filename):
 
 
 if __name__ == "__main__":
-    files = [
-        "test_sat_1.cnf",
-        "test_unsat_1.cnf",
-        "test_sat_2.cnf",
-        "test_unsat_2.cnf"
-    ]
+    filename = sys.argv[1]
 
-    for filename in files:
-        print("\nFile:", filename)
-        num_vars, clauses = parse_dimacs(filename)
-        print("Variables:", num_vars)
-        print("Clauses:", clauses)
+    print("\nFile:", filename)
+    num_vars, clauses = parse_dimacs(filename)
+    print("Variables:", num_vars)
+    print("Clauses:", len(clauses))
