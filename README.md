@@ -1,1 +1,0 @@
-# dpll-sat-solver
