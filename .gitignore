@@ -209,3 +209,5 @@ __marimo__/
 cnf/
 
 dpll_solver.py
+
+.vscode
