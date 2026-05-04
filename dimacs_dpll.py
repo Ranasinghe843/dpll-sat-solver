@@ -25,37 +25,42 @@ class DPLLSolver():
             return counter.most_common(1)[0][0]
     
     def satisfy_literal(self, clauses, literal):
-
         curr_clauses = []
         for clause in clauses:
             if literal in clause:
                 continue
-
-            if -literal in clause:
-                clause.remove(-literal)
-                if not clause:
-                    return None
             
-            curr_clauses.append(clause)
+            if -literal in clause:
+                new_clause = [l for l in clause if l != -literal]
+                
+                if not new_clause:
+                    return None
+                curr_clauses.append(new_clause)
+            else:
+                curr_clauses.append(clause)
         
         return curr_clauses
-    
-    def unit_clauses(self, clauses, model):
 
+    def unit_clauses(self, clauses, model):
         if clauses is None:
             return None, model
         
-        for clause in clauses:
-            if len(clause) != 1:
-                continue
-
-            literal = clause[0]
-            model.append(literal)
-            clauses = self.satisfy_literal(clauses, literal)
-
+        while True:
+            unit = None
+            for clause in clauses:
+                if len(clause) == 1:
+                    unit = clause[0]
+                    break
+            
+            if unit is None:
+                break
+            
+            model.append(unit)
+            clauses = self.satisfy_literal(clauses, unit)
+            
             if clauses is None:
                 return None, model
-        
+                
         return clauses, model
     
     def solve(self, clauses, model):
