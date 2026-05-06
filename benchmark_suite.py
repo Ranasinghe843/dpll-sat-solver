@@ -62,14 +62,14 @@ def run_multi_folder_benchmark(root_path):
             try:
                 # Run the solver
                 process = subprocess.run(
-                    ['python', 'dimacs_dpll.py', file_path],
+                    ['python', 'mySAT.py', file_path],
                     capture_output=True, text=True, timeout=120
                 )
                 duration = time.perf_counter() - start_time
                 output = process.stdout
                 
                 # Verification step (only for SAT)
-                if "SATISFIABLE" in output:
+                if "RESULT:SAT" in output:
                     match = re.search(r"Assignment: \[(.*?)\]", output)
                     if match:
                         model = [int(x) for x in match.group(1).replace(',', '').split()]
