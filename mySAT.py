@@ -1,8 +1,15 @@
 import sys
 from dimacs_parser import parse_dimacs
+import argparse
+import time
 
-class CDCLSolver:
-    def __init__(self):
+class DimacsSolver:
+    def __init__(self, use_learning=True, use_backtrack=True, use_watched=True):
+        
+        self.use_learning = use_learning
+        self.use_backtrack = use_backtrack
+        self.use_watched = use_watched
+        
         self.num_variables = 0
         self.clauses = []
         self.learned = []
@@ -16,17 +23,30 @@ class CDCLSolver:
         self.clause_watch = {}
         self.propagation_queue = []
 
+        if self.use_watched:
+            self.unit_propagate = self.unit_propagate_watched
+        else:
+            self.unit_propagate = self.unit_propagate_basic
+
+        self.stats = {
+            "decisions": 0,
+            "implications": 0,
+            "start_time": 0.0,
+            "end_time": 0.0
+        }
+
     def parse_cnf(self, file):
         self.num_variables, self.clauses = parse_dimacs(file)
         self.has_empty_clause = any(len(c) == 0 for c in self.clauses)
-        for i, clause in enumerate(self.clauses):
-            if len(clause) == 0: continue
-            w1 = clause[0]
-            w2 = clause[0] if len(clause) == 1 else clause[1]
-            self.clause_watch[i] = (w1, w2)
-            self.watches.setdefault(w1, []).append(i)
-            if w2 != w1:
-                self.watches.setdefault(w2, []).append(i)
+        if self.use_watched:
+            for i, clause in enumerate(self.clauses):
+                if len(clause) == 0: continue
+                w1 = clause[0]
+                w2 = clause[0] if len(clause) == 1 else clause[1]
+                self.clause_watch[i] = (w1, w2)
+                self.watches.setdefault(w1, []).append(i)
+                if w2 != w1:
+                    self.watches.setdefault(w2, []).append(i)
         for clause in self.clauses:
             if len(clause) == 1:
                 self.enqueue_assignment(clause[0], antecedent=clause)
@@ -46,8 +66,8 @@ class CDCLSolver:
         if v not in self.assignment: return None
         val = self.assignment[v]
         return val if lit > 0 else (not val)
-
-    def unit_propagate(self):
+    
+    def unit_propagate_watched(self):
         while self.propagation_queue:
             lit = self.propagation_queue.pop(0)
             false_lit = -lit
@@ -80,6 +100,25 @@ class CDCLSolver:
                     return clause
         return None
 
+    def unit_propagate_basic(self):
+        while self.propagation_queue:
+            lit = self.propagation_queue.pop(0)
+            for i in range(len(self.clauses) + len(self.learned)):
+                clause = self.clauses[i] if i < len(self.clauses) else self.learned[i - len(self.clauses)]
+                
+                if any(self.value_of_literal(l) is True for l in clause):
+                    continue
+                
+                unassigned = [l for l in clause if self.value_of_literal(l) is None]
+                
+                if len(unassigned) == 0:
+                    return clause
+                
+                if len(unassigned) == 1:
+                    if not self.enqueue_assignment(unassigned[0], antecedent=clause):
+                        return clause
+        return None
+    
     def enqueue_assignment(self, lit, antecedent=None):
         v = abs(lit)
         val = lit > 0
@@ -90,6 +129,8 @@ class CDCLSolver:
         self.antecedent[v] = antecedent
         self.trail.append(lit)
         self.propagation_queue.append(lit)
+        if self.decision_level > 0 and antecedent is not None:
+            self.stats["implications"] += 1
         return True
 
     def backtrack_to_level(self, level):
@@ -131,38 +172,72 @@ class CDCLSolver:
         ci = len(self.clauses) + len(self.learned)
         self.learned.append(clause)
         if not clause: return
-        w1 = clause[0]
-        w2 = clause[0] if len(clause) == 1 else clause[1]
-        self.clause_watch[ci] = (w1, w2)
-        self.watches.setdefault(w1, []).append(ci)
-        if w2 != w1: self.watches.setdefault(w2, []).append(ci)
+        if self.use_watched:
+            w1 = clause[0]
+            w2 = clause[0] if len(clause) == 1 else clause[1]
+            self.clause_watch[ci] = (w1, w2)
+            self.watches.setdefault(w1, []).append(ci)
+            if w2 != w1: self.watches.setdefault(w2, []).append(ci)
 
     def solve(self):
-        if self.has_empty_clause: return False, []
+        self.stats["start_time"] = time.perf_counter()
+        if self.has_empty_clause:
+            self.stats["end_time"] = time.perf_counter()
+            return False, []
         while True:
             conflict = self.unit_propagate()
             if conflict:
-                if self.decision_level == 0: return False, []
-                learned, backjump = self.analyze_conflict(conflict)
-                self.add_learned_clause(learned)
-                self.backtrack_to_level(backjump)
+                if self.decision_level == 0:
+                    self.stats["end_time"] = time.perf_counter()
+                    return False, []
+                learned, backtrack_level = self.analyze_conflict(conflict)
+                if self.use_learning:
+                    self.add_learned_clause(learned)
+                
+                target_level = backtrack_level if self.use_backtrack else self.decision_level - 1
+                self.backtrack_to_level(target_level)
+                
                 unassigned = [l for l in learned if abs(l) not in self.assignment]
                 if len(unassigned) == 1: self.enqueue_assignment(unassigned[0], learned)
                 continue
             if len(self.assignment) == self.num_variables:
+                self.stats["end_time"] = time.perf_counter()
                 return True, [v if val else -v for v, val in self.assignment.items()]
             lit = self.pick_branching_literal()
-            if lit is None: return True, [v if val else -v for v, val in self.assignment.items()]
+            if lit is None:
+                self.stats["end_time"] = time.perf_counter()
+                return True, [v if val else -v for v, val in self.assignment.items()]
+            self.stats["decisions"] += 1
             self.decision_level += 1
             self.enqueue_assignment(lit)
 
 def main():
     if len(sys.argv) < 2:
         sys.exit(1)
-        
-    solver = CDCLSolver()
+    
+    parser = argparse.ArgumentParser(description="SAT Solver")
+    
+    parser.add_argument("cnf_file", help="Path to the DIMACS CNF file")
+    
+    parser.add_argument("--no-learning", action="store_false", dest="learning",
+                        help="Disable Conflict-Driven Clause Learning")
+    parser.add_argument("--no-backtrack", action="store_false", dest="backtrack",
+                        help="Disable Non-chronological Backtracking")
+    parser.add_argument("--no-watched", action="store_false", dest="watched",
+                        help="Disable Watched Literals")
+    parser.add_argument("--stats", action="store_true",
+                        help="Print metrics for report")
+
+    args = parser.parse_args()
+
+    solver = DimacsSolver(
+        use_learning=args.learning, 
+        use_backtrack=args.backtrack, 
+        use_watched=args.watched
+    )
+
     try:
-        solver.parse_cnf(sys.argv[1])
+        solver.parse_cnf(args.cnf_file)
         sat, model = solver.solve()
         
         if sat:
@@ -178,6 +253,13 @@ def main():
             print(f"ASSIGNMENT:{' '.join(assignments)}")
         else:
             print("RESULT:UNSAT")
+        
+        if args.stats:
+            total_time = solver.stats["end_time"] - solver.stats["start_time"]
+            print(f"--- Metrics for Report ---")
+            print(f"Execution Time: {total_time:.4f}s")
+            print(f"Decisions: {solver.stats['decisions']}")
+            print(f"Implications: {solver.stats['implications']}")
             
     except Exception:
         sys.exit(1)
