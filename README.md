@@ -21,13 +21,13 @@ Group 19: Samitha Ranasinghe, Milen Manoj
         - `--stats`: Prints execution time, number of decisions, and total implications found.
 4. Functions and Data Structures
     - Key Data Structures
-        - `self.watches`: A dictionary-based implementation of Two-Watched Literals. [cite_start]It maps literals to the indices of clauses they are currently monitoring for efficient BCP.
+        - `self.watches`: A dictionary-based implementation of Two-Watched Literals. It maps literals to the indices of clauses they are currently monitoring for efficient BCP.
         - `self.trail`: A chronological list of literal assignments used to support non-chronological backtracking.
-        - `self.antecedent`: A mapping of variables to the clauses that forced their assignment, forming the basis for conflict resolution and 1-UIP analysis.
+        - `self.antecedent`: A mapping of variables to the clauses that forced their assignment, forming the basis for conflict resolution.
     - Primary Functions
-        - `unit_propagate`: Implements Boolean Constraint Propagation (BCP) using the Two-Watched Literals optimization.
+        - `unit_propagate_watched`: Implements Boolean Constraint Propagation using the Two-Watched Literals optimization.
         - `analyze_conflict`: Performs conflict analysis using resolution to generate Learned Clauses.
-        - `backtrack_to_level`: Implements Non-chronological Backtracking (Backjumping), allowing the solver to jump to the decision level responsible for a conflict.
+        - `backtrack_to_level`: Implements Non-chronological Backtracking, allowing the solver to jump to the decision level responsible for a conflict.
 5. **Output Format:** The solver provides output in the exact format required for automated grading
     - Satisfiable:
         - **RESULT:SAT**
