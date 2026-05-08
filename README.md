@@ -26,10 +26,14 @@ Group 19: Samitha Ranasinghe, Milen Manoj
         - `self.antecedent`: A mapping of variables to the clauses that forced their assignment, forming the basis for conflict resolution.
     - Primary Functions
         - `unit_propagate_watched`: Implements Boolean Constraint Propagation using the Two-Watched Literals optimization.
-        - `analyze_conflict`: Performs conflict analysis using resolution to generate Learned Clauses.
-        - `backtrack_to_level`: Implements Non-chronological Backtracking, allowing the solver to jump to the decision level responsible for a conflict.
+        - `fix_conflict`: Performs conflict analysis using resolution to generate Learned Clauses.
+        - `backtrack`: Implements Non-chronological Backtracking, allowing the solver to jump to the decision level responsible for a conflict.
 5. **Output Format:** The solver provides output in the exact format required for automated grading
     - Satisfiable:
         - **RESULT:SAT**
         - **ASSIGNMENT: 1=1 2=0 3=1 ...**.
     - Unsatisfiable: **RESULT:UNSAT**.
+
+6. **Testing:** Verifier and Benchmarker:
+    - Verify with entire dataset: `python3 verify.py path/to/cnf_folder`
+    - Get benchmarks with different heuristics and MiniSat: `python3 benchmark.py --dataset path/to/cnf_folder`
