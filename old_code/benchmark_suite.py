@@ -7,8 +7,6 @@ import glob
 import statistics
 import matplotlib.pyplot as plt
 
-# --- Verification & Parsing Logic (Keep as is) ---
-
 def parse_cnf_clauses(filepath):
     clauses = []
     current_clause = []
@@ -32,13 +30,9 @@ def verify_model(clauses, assignment):
             return False
     return True
 
-# --- Benchmarking Engine ---
-
 def run_multi_folder_benchmark(root_path):
-    # Dictionary to store results: { folder_name: [list_of_times] }
     folder_data = {}
     
-    # Get all subdirectories in the root path
     subdirs = [d for d in os.listdir(root_path) if os.path.isdir(os.path.join(root_path, d))]
     subdirs.sort() # Ensure consistent order
 
@@ -60,7 +54,6 @@ def run_multi_folder_benchmark(root_path):
         for file_path in cnf_files:
             start_time = time.perf_counter()
             try:
-                # Run the solver
                 process = subprocess.run(
                     ['python', 'mySAT.py', file_path],
                     capture_output=True, text=True, timeout=120
@@ -68,7 +61,6 @@ def run_multi_folder_benchmark(root_path):
                 duration = time.perf_counter() - start_time
                 output = process.stdout
                 
-                # Verification step (only for SAT)
                 if "RESULT:SAT" in output:
                     match = re.search(r"Assignment: \[(.*?)\]", output)
                     if match:
@@ -80,13 +72,12 @@ def run_multi_folder_benchmark(root_path):
                 execution_times.append(duration)
 
             except subprocess.TimeoutExpired:
-                execution_times.append(120.0) # Penalty for timeout
+                execution_times.append(120.0)
             except Exception:
                 continue
 
         if execution_times:
             avg_time = statistics.mean(execution_times)
-            # Variance requires at least 2 data points
             var_time = statistics.variance(execution_times) if len(execution_times) > 1 else 0.0
             folder_data[folder] = execution_times
             
@@ -98,14 +89,10 @@ def produce_summary_plot(folder_data):
     labels = list(folder_data.keys())
     means = [statistics.mean(times) for times in folder_data.values()]
     
-    # Calculate Standard Deviation for error bars (Square root of Variance)
-    # This represents the "spread" of the data around the mean
     stds = [statistics.stdev(times) if len(times) > 1 else 0.0 for times in folder_data.values()]
     
     plt.figure(figsize=(10, 7))
     
-    # Create bar chart with error bars
-    # capsize adds the horizontal lines at the top/bottom of the error bars
     bars = plt.bar(labels, means, yerr=stds, capsize=10, color='skyblue', edgecolor='navy', alpha=0.8)
     
     plt.xlabel('Dataset', fontweight='bold')

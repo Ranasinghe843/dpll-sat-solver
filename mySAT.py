@@ -20,7 +20,7 @@ class DimacsSolver:
         # assignment tracking
         self.assignment = {}
         self.level = {}
-        self.antecedent = {}
+        self.antecedant = {}
         self.trail = []
         self.decision_level = 0
 
@@ -60,14 +60,14 @@ class DimacsSolver:
 
         for clause in self.clauses:
             if len(clause) == 1:
-                self.enqueue_assignment(clause[0], antecedent=clause)
+                self.add_to_assignment(clause[0], antecedant=clause)
 
-    def pick_branching_literal(self): # most freq unassign literal
+    def branching_literal(self): # most freq unassign literal
         counts = {}
         for clause in self.clauses + self.learned:
             for lit in clause:
                 v = abs(lit)
-                if v in self.assignment: 
+                if v in self.assignment:
                     continue
                 counts[lit] = counts.get(lit, 0) + 1
         if not counts: 
@@ -113,7 +113,7 @@ class DimacsSolver:
                 if found_new: 
                     continue
                 if self.value_of_literal(other) is None:
-                    if not self.enqueue_assignment(other, antecedent=clause):
+                    if not self.add_to_assignment(other, antecedant=clause):
                         return clause
                 elif self.value_of_literal(other) is False:
                     return clause
@@ -134,11 +134,11 @@ class DimacsSolver:
                     return clause
                 
                 if len(unassigned) == 1:
-                    if not self.enqueue_assignment(unassigned[0], antecedent=clause):
+                    if not self.add_to_assignment(unassigned[0], antecedant=clause):
                         return clause
         return None
     
-    def enqueue_assignment(self, lit, antecedent=None): #assign literal and  add to queue
+    def add_to_assignment(self, lit, antecedant=None): #assign literal and  add to queue
         v = abs(lit)
         val = lit > 0
 
@@ -147,15 +147,15 @@ class DimacsSolver:
         
         self.assignment[v] = val
         self.level[v] = self.decision_level
-        self.antecedent[v] = antecedent
+        self.antecedant[v] = antecedant
         self.trail.append(lit)
         self.propagation_queue.append(lit)
 
-        if self.decision_level > 0 and antecedent is not None:
+        if self.decision_level > 0 and antecedant is not None:
             self.stats["implications"] += 1
         return True
 
-    def backtrack_to_level(self, level): #undo assign till target lvl reached
+    def backtrack(self, level): #undo assign till target lvl reached
         while self.trail:
             lit = self.trail[-1]
             v = abs(lit)
@@ -164,36 +164,52 @@ class DimacsSolver:
             self.trail.pop()
             del self.assignment[v]
             del self.level[v]
-            if v in self.antecedent: 
-                del self.antecedent[v]
+            if v in self.antecedant: 
+                del self.antecedant[v]
         self.decision_level = level
 
     def resolve(self, c1, c2, pivot): # conflict analysis
-        res = set(c1) | set(c2)
-        res.remove(pivot)
-        res.remove(-pivot)
+        union = set(c1) | set(c2)
+        union.remove(pivot)
+        union.remove(-pivot)
 
-        for lit in list(res): # check contradiction
-            if -lit in res: return None
-        return list(res)
+        for lit in list(union): # check contradiction
+            if -lit in union: return None
+        return list(union)
+    
+    def _curr_level_literals(self, clause):
+        return sum(1 for lit in clause 
+                if self.level.get(abs(lit), 0) == self.decision_level)
 
-    def analyze_conflict(self, conflict_clause):# first UIP
+    def _backjump_level(self, clause):
+        other_levels = [self.level.get(abs(lit), 0) for lit in clause 
+                        if self.level.get(abs(lit), 0) != self.decision_level]
+        return max(other_levels) if other_levels else 0
+    
+    def fix_conflict(self, conflict_clause):# first UIP
         learned = list(conflict_clause)
-        def count_lvl(cl): return sum(1 for l in cl if self.level.get(abs(l), 0) == self.decision_level)
-        i = len(self.trail) - 1
+        
+        trail_idx = len(self.trail) - 1
 
-        while count_lvl(learned) > 1 and i >= 0:
-            v = abs(self.trail[i])
-            if any(abs(l) == v for l in learned):
-                ant = self.antecedent.get(v)
-                if ant:
-                    pivot = next(l for l in learned if abs(l) == v)
-                    new = self.resolve(learned, ant, pivot)
-                    if new is not None: 
-                        learned = new
-            i -= 1
-        lvls = [self.level.get(abs(l), 0) for l in learned if self.level.get(abs(l), 0) != self.decision_level]
-        return learned, (max(lvls) if lvls else 0)
+        while self._curr_level_literals(learned) > 1:
+            if trail_idx < 0:
+                break
+                
+            assigned_var = abs(self.trail[trail_idx])
+
+            if any(abs(lit) == assigned_var for lit in learned):
+                antecedent = self.antecedant.get(assigned_var)
+                
+                if antecedent:
+                    pivot = next(lit for lit in learned if abs(lit) == assigned_var)
+                    
+                    learned = self.resolve(learned, antecedent, pivot)
+            
+            trail_idx -= 1
+
+        backjump_level = self._backjump_level(learned)
+        
+        return learned, backjump_level
 
     def add_learned_clause(self, clause):
         ci = len(self.clauses) + len(self.learned)
@@ -210,33 +226,38 @@ class DimacsSolver:
         self.stats["start_time"] = time.perf_counter()
         if self.has_empty_clause:
             self.stats["end_time"] = time.perf_counter()
-            return False, []
+            return False, {}
         while True:
             conflict = self.unit_propagate()
             if conflict:
                 if self.decision_level == 0:
                     self.stats["end_time"] = time.perf_counter()
-                    return False, []
-                learned, backtrack_level = self.analyze_conflict(conflict)
+                    return False, {}
+                learned, backtrack_level = self.fix_conflict(conflict)
                 if self.use_learning:
                     self.add_learned_clause(learned)
                 
-                target_level = backtrack_level if self.use_backtrack else self.decision_level - 1
-                self.backtrack_to_level(target_level)
+                if self.use_backtrack:
+                    self.backtrack(backtrack_level)
+                else:
+                    self.backtrack(self.decision_level - 1)
                 
-                unassigned = [l for l in learned if abs(l) not in self.assignment]
-                if len(unassigned) == 1: self.enqueue_assignment(unassigned[0], learned)
-                continue
+                try:
+                    unassigned = [l for l in learned if abs(l) not in self.assignment] # type: ignore
+                    if len(unassigned) == 1: self.add_to_assignment(unassigned[0], learned)
+                    continue
+                except:
+                    pass
             if len(self.assignment) == self.num_variables:
                 self.stats["end_time"] = time.perf_counter()
-                return True, [v if val else -v for v, val in self.assignment.items()]
-            lit = self.pick_branching_literal()
+                return True, self.assignment
+            lit = self.branching_literal()
             if lit is None:
                 self.stats["end_time"] = time.perf_counter()
-                return True, [v if val else -v for v, val in self.assignment.items()]
+                return True, self.assignment
             self.stats["decisions"] += 1
             self.decision_level += 1
-            self.enqueue_assignment(lit)
+            self.add_to_assignment(lit)
 
 def main():
     if len(sys.argv) < 2:
@@ -263,33 +284,28 @@ def main():
         use_watched=args.watched
     )
 
-    try:
-        solver.parse_cnf(args.cnf_file)
-        sat, model = solver.solve()
+    solver.parse_cnf(args.cnf_file)
+    sat, model = solver.solve()
+    
+    if sat:
+        print("RESULT:SAT")
         
-        if sat:
-            print("RESULT:SAT")
-            
-            sorted_model = sorted(model, key=abs)
-            assignments = []
-            for lit in sorted_model:
-                var = abs(lit)
-                val = 1 if lit > 0 else 0
-                assignments.append(f"{var}={val}")
-            
-            print(f"ASSIGNMENT:{' '.join(assignments)}")
-        else:
-            print("RESULT:UNSAT")
+        sorted_vars = sorted(model.keys())
+        assignments = []
+        for var in sorted_vars:
+            val = 1 if model[var] else 0
+            assignments.append(f"{var}={val}")
         
-        if args.stats:
-            total_time = solver.stats["end_time"] - solver.stats["start_time"]
-            print(f"--- Metrics for Report ---")
-            print(f"Execution Time: {total_time:.4f}s")
-            print(f"Decisions: {solver.stats['decisions']}")
-            print(f"Implications: {solver.stats['implications']}")
-            
-    except Exception:
-        sys.exit(1)
+        print(f"ASSIGNMENT:{' '.join(assignments)}")
+    else:
+        print("RESULT:UNSAT")
+    
+    if args.stats:
+        total_time = solver.stats["end_time"] - solver.stats["start_time"]
+        print(f"----------------------------------------------")
+        print(f"Execution Time: {total_time:.4f}s")
+        print(f"Decisions: {solver.stats['decisions']}")
+        print(f"Implications: {solver.stats['implications']}")
 
 if __name__ == "__main__":
     main()

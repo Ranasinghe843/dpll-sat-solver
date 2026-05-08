@@ -84035,86 +84035,6 @@
             }
         ]
     },
-    "hole6": {
-        "Base DPLL": [
-            {
-                "time": 37.2408,
-                "decisions": 50589,
-                "implications": 679191,
-                "status": "UNSAT"
-            }
-        ],
-        "+ Learning": [
-            {
-                "time": 1.059,
-                "decisions": 299,
-                "implications": 4968,
-                "status": "UNSAT"
-            }
-        ],
-        "+ Backtrack": [
-            {
-                "time": 1.0449,
-                "decisions": 362,
-                "implications": 5142,
-                "status": "UNSAT"
-            }
-        ],
-        "+ Watched": [
-            {
-                "time": 0.0988,
-                "decisions": 659,
-                "implications": 5795,
-                "status": "UNSAT"
-            }
-        ],
-        "MiniSat": [
-            {
-                "time": 0.018190749979112297,
-                "status": "UNSAT"
-            }
-        ]
-    },
-    "hole7": {
-        "Base DPLL": [
-            {
-                "time": 120.0,
-                "decisions": -1,
-                "implications": -1,
-                "status": "TIMEOUT"
-            }
-        ],
-        "+ Learning": [
-            {
-                "time": 8.2682,
-                "decisions": 793,
-                "implications": 15909,
-                "status": "UNSAT"
-            }
-        ],
-        "+ Backtrack": [
-            {
-                "time": 9.0694,
-                "decisions": 938,
-                "implications": 17641,
-                "status": "UNSAT"
-            }
-        ],
-        "+ Watched": [
-            {
-                "time": 2.5794,
-                "decisions": 4181,
-                "implications": 29764,
-                "status": "UNSAT"
-            }
-        ],
-        "MiniSat": [
-            {
-                "time": 0.032528042036574334,
-                "status": "UNSAT"
-            }
-        ]
-    },
     "flat125-301": {
         "Base DPLL": [
             {
@@ -86924,6 +86844,86 @@
             {
                 "time": 0.0029837500187568367,
                 "status": "SAT"
+            }
+        ]
+    },
+    "hole6": {
+        "Base DPLL": [
+            {
+                "time": 37.2408,
+                "decisions": 50589,
+                "implications": 679191,
+                "status": "UNSAT"
+            }
+        ],
+        "+ Learning": [
+            {
+                "time": 1.059,
+                "decisions": 299,
+                "implications": 4968,
+                "status": "UNSAT"
+            }
+        ],
+        "+ Backtrack": [
+            {
+                "time": 1.0449,
+                "decisions": 362,
+                "implications": 5142,
+                "status": "UNSAT"
+            }
+        ],
+        "+ Watched": [
+            {
+                "time": 0.0988,
+                "decisions": 659,
+                "implications": 5795,
+                "status": "UNSAT"
+            }
+        ],
+        "MiniSat": [
+            {
+                "time": 0.018190749979112297,
+                "status": "UNSAT"
+            }
+        ]
+    },
+    "hole7": {
+        "Base DPLL": [
+            {
+                "time": 120.0,
+                "decisions": -1,
+                "implications": -1,
+                "status": "TIMEOUT"
+            }
+        ],
+        "+ Learning": [
+            {
+                "time": 8.2682,
+                "decisions": 793,
+                "implications": 15909,
+                "status": "UNSAT"
+            }
+        ],
+        "+ Backtrack": [
+            {
+                "time": 9.0694,
+                "decisions": 938,
+                "implications": 17641,
+                "status": "UNSAT"
+            }
+        ],
+        "+ Watched": [
+            {
+                "time": 2.5794,
+                "decisions": 4181,
+                "implications": 29764,
+                "status": "UNSAT"
+            }
+        ],
+        "MiniSat": [
+            {
+                "time": 0.032528042036574334,
+                "status": "UNSAT"
             }
         ]
     }

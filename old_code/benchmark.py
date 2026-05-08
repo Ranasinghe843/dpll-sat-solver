@@ -14,7 +14,6 @@ def run_solver(cnf_path, flags):
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         output = proc.stdout
         
-        # Extract metrics using regex to match your internal --stats output
         t_match = re.search(r"Execution Time: ([\d.]+)s", output)
         d_match = re.search(r"Decisions: (\d+)", output)
         i_match = re.search(r"Implications: (\d+)", output)
@@ -63,7 +62,6 @@ def benchmark_all(root_path):
                 data = run_minisat(cnf_full) if flags == "REF" else run_solver(cnf_full, flags)
                 results[folder][c_name].append(data)
             
-            # Calculate averages for the console log
             avg_t = statistics.mean([d['time'] for d in results[folder][c_name]])
             avg_d = statistics.mean([d['decisions'] for d in results[folder][c_name] if 'decisions' in d]) if c_name != "MiniSat" else 0
             avg_i = statistics.mean([d['implications'] for d in results[folder][c_name] if 'implications' in d]) if c_name != "MiniSat" else 0
@@ -73,7 +71,6 @@ def benchmark_all(root_path):
     return results
 
 def generate_log_plot(results):
-    # [span_13](start_span)"""Produces a log-scale plot for performance scaling analysis[span_13](end_span)."""
     folders = list(results.keys())
     config_names = list(results[folders[0]].keys())
     
@@ -90,10 +87,11 @@ def generate_log_plot(results):
 
     ax.set_yscale('log')
     ax.set_ylabel('Execution Time (s) - Log Scale', fontweight='bold')
-    ax.set_title('Scaling Analysis with Log-Scale Timing', fontsize=14)
+    ax.set_xlabel('CNF Set', fontweight='bold')
+    ax.set_title('Timing Improvements with Heuristics', fontsize=14)
     ax.set_xticks([pos + 2*width for pos in x])
     ax.set_xticklabels(folders)
-    ax.legend()
+    ax.legend(loc='upper left')
     plt.grid(True, which="both", ls="-", alpha=0.2)
     plt.tight_layout()
     plt.savefig('performance_log_analysis.png')
